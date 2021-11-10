@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io'}
+}
+
+dependencies {
+    implementation group: 'com.github.mac-comp127', name: 'kilt-graphics', version: '1.+'
+    
+    implementation group: 'org.jsoup', name: 'jsoup', version: '1.12.1'
+    // https://mvnrepository.com/artifact/org.graphstream/gs-core
+    implementation group: 'org.graphstream', name: 'gs-core', version: '1.3'
+    // https://mvnrepository.com/artifact/org.graphstream/gs-ui
+    implementation group: 'org.graphstream', name: 'gs-ui', version: '1.3'
+
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter', version: '5.6.+'
+
+}
+
+test {
+    useJUnitPlatform()
+}
+
+sourceCompatibility = 1.12
+targetCompatibility = 1.12
+
+sourceSets.main.java.srcDirs = ['src']
+sourceSets.main.resources.srcDirs = ['res']
+sourceSets.test.java.srcDirs = ['test']
