@@ -1,3 +1,10 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "files.exclude": {
+        ".gradle": true,
+        ".vscode": true,
+        "**/.gitkeep": true,
+        "bin": true,
+        "build": true
+    },
+    "java.configuration.updateBuildConfiguration": "automatic"
 }
