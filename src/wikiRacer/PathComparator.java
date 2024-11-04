@@ -1,9 +1,7 @@
 package wikiRacer;
 
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Used to sort lists of pages in the priority queue.

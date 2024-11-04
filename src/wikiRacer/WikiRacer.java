@@ -3,9 +3,13 @@ package wikiRacer;
 import java.util.*;
 import org.graphstream.graph.*;
 import org.graphstream.graph.implementations.*;
+import java.util.concurrent.PriorityBlockingQueue;
 
+/**
+ * Multi-threaded WikiRacer game solver.
+ */
 public class WikiRacer {
-    private PriorityQueue<List<Page>> paths;
+    private PriorityBlockingQueue<List<Page>> paths;
     private WikipediaProvider wikiProvider;
     private Graph graph;
 
@@ -13,42 +17,96 @@ public class WikiRacer {
         wikiProvider = new WikipediaProvider();
     }
 
+    /**
+     * Finds a path from startPageTitle to endPageTitle in the English Wikipedia graph
+     * @param startPageTitle
+     * @param endPageTitle
+     * @return
+     */
     public List<Page> findWikiPath(String startPageTitle, String endPageTitle){
-        graph = new SingleGraph("Wikipedia Graph", false, true);
+        graph = Graphs.synchronizedGraph(new SingleGraph("Wikipedia Graph", false, true));
         graph.display();
-        graph.addAttribute("ui.stylesheet", "edge { fill-color: grey; arrow-size: 3px, 2px; } node { size: 2px, 2px;} edge.onPath { fill-color: red; z-index: 99999999; } edge.potentialPath { fill-color: yellow; z-index: 88888888; }");
+        graph.setAttribute("ui.stylesheet", "edge { fill-color: grey; arrow-size: 3px, 2px; } node { size: 2px, 2px;} edge.onPath { fill-color: red; z-index: 99999999; } edge.potentialPath { fill-color: yellow; z-index: 88888888; }");
 
-        // Uncomment the following two lines to improve the quality of the graph display (while taking longer to render)
-        //graph.addAttribute("ui.quality");
-        //graph.addAttribute("ui.antialias");
+        // Comment the following two lines to lower the quality of the graph display (while taking less time to render)
+        graph.setAttribute("ui.quality");
+        graph.setAttribute("ui.antialias");
 
+        // Used for getNumLinksInCommon
+        Set<String> endPageLinks = wikiProvider.getLinkTitles(endPageTitle);
 
-        //TODO: Find a path between the start page and endPage:
-        // Get the set of link titles for the end page from the wikipedia provider. We'll use this later in finding the number of links in common between pages and the endPage.
-        // Create an instance of PathComparator
-        // Initialize the paths priorityqueue to use your comparator (a path is a List<Page>)
-        // Create a Page representing the start page, setting its title, page links, and number of links in common with the end page (Hint: look at the getNumLinksInCommon method)
-        // Call addLinksToGraph with the start page as a parameter. This will draw the page and its linked pages as vertices with edges between them.
-        // Create/add a path list containing the start page to the queue.
-        // While the queue is not empty:
-        //      Dequeue the highest priority partial-path from the front of the queue.
-        //      Print the partial-path to see the current status
-        //      If the partial-path has at least two pages:
-        //          Call colorPotentialPathEdge with the last two pages in the path as parameters. This will color the edge yellow in the visualization.
-        //      Get the set of links of the current page i.e. the page at the end of the just dequeued path.
-        //      For each link:
-        //          Create a new page for the link
-        //          If the link page is not contained in the partial-path already (we haven't visited it):
-        //              Get the page's links and numLinksInCommonWithEndPage and update the page's variables
-        //              Call addLinksToGraph with the page as a parameter to update the visualization
-        //              Create a copy of the current partial-path (List<Page> partialPathCopy = new ArrayList<>(partialPath);)
-        //              Add the new page to the copied path
-        //              If the link equals the endPageTitle:
-        //                  We found the path!, return the copied path
-        //              Otherwise, add the copied path to the queue
-        // If while loop exits, no path was found so return an empty List<Page>
+        //TODO: Declare and intialize the comparator and paths PriorityBlockingQueue
+        
 
 
+        // Initialize the algorithm with the starting page
+        List<Page> initialPath = new ArrayList<>();
+        Set<String> pageLinks = wikiProvider.getLinkTitles(startPageTitle);
+        Page startPage = new Page(startPageTitle, pageLinks, getNumLinksInCommon(pageLinks, endPageLinks));
+        addLinksToGraph(startPage); // Draws the page and its linked pages as vertices with edges between them.
+        initialPath.add(startPage);
+        paths.offer(initialPath);
+
+        while(!paths.isEmpty()) {
+            List<Page> bestPath = null;
+            //TODO:
+            // 1. Dequeue the highest priority partial-path from the front of the queue and assign it to a the bestPath variable.
+            // 2. Print the partial-path to see the current status
+            // 3. Call addLinksToGraph with the last page of the bestPath as a parameter to update the visualization
+           
+        
+
+
+
+            if (bestPath.size() > 1){
+                colorPotentialPathEdge(bestPath.get(bestPath.size()-2), bestPath.get(bestPath.size()-1));
+            }
+
+            Set<String> links = bestPath.get(bestPath.size()-1).getLinks();
+
+            List<Thread> threads = new ArrayList<>(links.size());
+
+            for(String link : links){
+                Page linkPage = new Page(link);
+                // Creates a shallow copy of the path so we can add a new page to the end of the path.
+                List<Page> bestPathCopy = new ArrayList<>(bestPath);
+                
+                // Have we found the target end page?
+                if (link.equals(endPageTitle)){
+                    bestPathCopy.add(linkPage);
+                    // Stop all the current threads
+                    try{
+                        for(Thread thread : threads){
+                            thread.interrupt();
+                        }
+                    } catch (SecurityException ex){}
+                    return bestPathCopy;
+                }
+
+                // Create a new virtual thread (backed by operating system threads) with a Runnable lambda expression to describe the work.
+                Thread thread = Thread.ofVirtual().start(() -> {
+                    
+                    //TODO:
+                    // If the link page is not contained in the partial-path already (we haven't visited it):
+                    //     Get the page's links and numLinksInCommonWithEndPage and update the page's variables with this data.
+                    //     Add the new page to the bestPathCopy
+                    //     Add the copied path to the queue
+                    
+                    
+
+
+
+                });
+                threads.add(thread);
+            }
+
+            // Wait for all the threads to finish their work before continuing
+            try{
+                for(Thread thread : threads){
+                    thread.join(); // blocks, i.e. temporarily stops, the current thread that is iterating over the links until thread has finished.
+                }
+            } catch (InterruptedException ex){}
+        }
         return new ArrayList<>(0);
     }
 
@@ -104,12 +162,22 @@ public class WikiRacer {
     }
 
     public static void main(String[] args){
-        System.setProperty("org.graphstream.ui.renderer", "org.graphstream.ui.j2dviewer.J2DGraphRenderer");
+        System.setProperty("org.graphstream.ui", "swing"); 
         WikiRacer racer = new WikiRacer();
 
-        List<Page> path = racer.findWikiPath("Fruit", "Strawberry");
-        //List<Page> path = racer.findWikiPath("Macalester_College", "UN");
+        long start = System.currentTimeMillis();
+
+        //List<Page> path = racer.findWikiPath("James_Gosling", "Google");
+        //List<Page> path = racer.findWikiPath("Fruit", "Strawberry");
+        List<Page> path = racer.findWikiPath("Macalester_College", "UN");
         //List<Page> path = racer.findWikiPath("Milkshake", "Gene");
+        //List<Page> path = racer.findWikiPath("Apple", "Zebra");
+        //List<Page> path = racer.findWikiPath("Tomato", "Taylor_Swift");
+
+
+        long end = System.currentTimeMillis();
+        double elapsedTimeSec = ((double) (end - start))/1000;
+        System.out.println("Search took "+ elapsedTimeSec + " seconds");
 
         // Draw the final path in red in the visualization
         racer.colorPath(path);

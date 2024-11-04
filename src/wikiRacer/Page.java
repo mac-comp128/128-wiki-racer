@@ -61,6 +61,7 @@ public class Page {
         return Objects.hash(title);
     }
 
+    @Override
     public String toString(){
         return "("+title+", "+numLinksInCommonWithEndPage+")";
     }
